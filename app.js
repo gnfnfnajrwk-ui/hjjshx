@@ -289,8 +289,8 @@ function runAll(){
   var curPI=simulate(c,"pi",currentParams("pi"));
   var curPID=simulate(c,"pid",currentParams("pid"));
   var osc=lastWindowWidth(c,baseOn,1800),pm=perf(c,baseP),pim=perf(c,basePI),pidm=perf(c,basePID);
-  $("osc").textContent=fmt(osc.width,2)+" ℃";
-  $("oscsub").textContent="min "+fmt(osc.min,2)+" / max "+fmt(osc.max,2);
+  $("osc").textContent="±"+fmt(osc.width/2,2)+" ℃";
+  $("oscsub").textContent="P-P "+fmt(osc.width,2)+" ℃ · min "+fmt(osc.min,2)+" / max "+fmt(osc.max,2);
   $("pres").textContent=fmt(pm.err,2)+" ℃";$("pressub").textContent="최종 "+fmt(pm.fin,2)+" ℃";
   $("piderr").textContent=fmt(pidm.err,6)+" ℃";$("piderrsub").textContent="최종 "+fmt(pidm.fin,2)+" ℃";
   $("pierr").textContent=fmt(pim.err,4)+" ℃";$("pierrsub").textContent="추가 비교용";
