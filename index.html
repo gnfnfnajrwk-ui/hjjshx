@@ -3,123 +3,197 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PID Tuning Simulator</title>
-<style>
-:root{--bg:#f6f8fb;--card:#fff;--text:#17202a;--muted:#667085;--line:#d9e0e8;--blue:#2563eb;--orange:#f59e0b;--green:#087443;--red:#b42318}
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
-header{padding:18px 22px;background:#fff;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
-h1{font-size:23px;margin:0 0 4px}header p{margin:0;color:var(--muted);font-size:14px}
-button{border:1px solid var(--blue);background:var(--blue);color:#fff;border-radius:9px;padding:9px 12px;font-weight:700;cursor:pointer}
-button.secondary{background:#fff;color:var(--text);border-color:var(--line)}
-.wrap{max-width:1500px;margin:auto;padding:16px;display:grid;grid-template-columns:350px minmax(0,1fr);gap:16px}
-aside,.main{min-width:0}.panel,.chart{background:#fff;border:1px solid var(--line);border-radius:13px;padding:14px;margin-bottom:12px}
-.panel h2,.chart h2{font-size:16px;margin:0 0 10px}.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-label{display:grid;gap:5px;font-size:12px;font-weight:700;color:#344054;margin-top:8px}
-input,select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;min-height:38px;padding:7px 9px;font:inherit;background:#fff}
-input[type=range]{padding:0;border:0;accent-color:var(--blue)}textarea{min-height:76px;font-family:ui-monospace,monospace;font-size:12px}
-.tune{display:grid;grid-template-columns:50px 1fr 86px;gap:7px;align-items:center;margin-top:8px}.tune label{margin:0}
-.status{padding:9px 11px;border-radius:9px;background:#ecfdf3;border:1px solid #abefc6;color:var(--green);font-size:13px;font-weight:700;margin-bottom:12px}
-.status.err{background:#fef3f2;border-color:#fecdca;color:var(--red)}
-.metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:12px}.metric{background:#fff;border:1px solid var(--line);border-radius:11px;padding:11px}.metric span{display:block;color:var(--muted);font-size:11px}.metric b{display:block;margin-top:4px;font-size:17px}
-canvas{display:block;width:100%;height:auto}.legend{font-size:12px;color:var(--muted);margin-bottom:6px}.hint{font-size:12px;color:var(--muted);line-height:1.45}
-.hidden{display:none}.actions{display:flex;gap:7px;flex-wrap:wrap}.actions button{flex:1}
-@media(max-width:900px){.wrap{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(3,1fr)}}@media(max-width:520px){.metrics{grid-template-columns:repeat(2,1fr)}.row2{grid-template-columns:1fr}.tune{grid-template-columns:45px 1fr}.tune input[type=number]{grid-column:2}}
-</style>
+<title>Control & PID Tuning Simulator</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header>
-<div><h1>PID Tuning Simulator</h1><p>PID 값을 움직이면 응답이 즉시 다시 계산됩니다.</p></div>
-<div class="actions"><button id="reset" class="secondary">기본값 복원</button><button id="csv">CSV 저장</button></div>
+  <div>
+    <h1>Control & PID Tuning Simulator</h1>
+    <p>ON/OFF · P · PI · PID 비교, 실시간 튜닝, 시간별 수치표를 한 화면에서 확인합니다.</p>
+  </div>
+  <div class="actions">
+    <button id="reset" class="secondary">기본 조건 복원</button>
+    <button id="clearHistory" class="secondary">튜닝 이력 지우기</button>
+    <button id="csv">전체 CSV 저장</button>
+  </div>
 </header>
+
 <div class="wrap">
 <aside>
-<section class="panel">
-<h2>공정 모델</h2>
-<label>모델<select id="model"><option value="fopdt">FOPDT</option><option value="custom">Custom ODE</option></select></label>
-<div id="fopdt">
-<label>초기값 T0 [℃]<input id="initial" type="number" value="25"></label>
-<label>기준값 / 주변온도 [℃]<input id="bias" type="number" value="25"></label>
-<div class="row2"><label>시정수 τ [s]<input id="tau" type="number" value="300" min="0.01"></label><label>공정 이득 K<input id="gain" type="number" value="16" step="0.1"></label></div>
-<label>시간지연 L [s]<input id="delay" type="number" value="30" min="0"></label>
-<p class="hint">기본식: dT/dt = (-(T-25) + 16·u(t-30)) / 300</p>
-</div>
-<div id="custom" class="hidden">
-<label>초기값 y0<input id="cinitial" type="number" value="25"></label>
-<label>시간지연 L [s]<input id="cdelay" type="number" value="30" min="0"></label>
-<label>dy/dt 식<textarea id="equation">(-(y - 25) + 16*u) / 300</textarea></label>
-<p class="hint">변수: y, u, t, sp. Math 함수 사용 가능. 예: (-0.02*y + 0.5*u)</p>
-</div>
-</section>
-<section class="panel">
-<h2>시뮬레이션</h2>
-<div class="row2"><label>Setpoint<input id="sp" type="number" value="1000"></label><label>총 시간 [s]<input id="duration" type="number" value="5400" min="10" max="20000"></label></div>
-<div class="row2"><label>dt [s]<input id="dt" type="number" value="1" min="0.05" max="10" step="0.05"></label><label>Anti-windup<select id="aw"><option value="on">ON</option><option value="off">OFF</option></select></label></div>
-<div class="row2"><label>출력 최소 [%]<input id="umin" type="number" value="0"></label><label>출력 최대 [%]<input id="umax" type="number" value="100"></label></div>
-</section>
-<section class="panel">
-<h2>PID Tuning</h2>
-<div class="tune"><label>Kc</label><input id="kc" type="range" min="0" max="2" step="0.005" value="0.3"><input id="kcn" type="number" value="0.3" step="0.005"></div>
-<div class="tune"><label>Ti</label><input id="ti" type="range" min="1" max="1000" step="1" value="200"><input id="tin" type="number" value="200" step="1"></div>
-<div class="tune"><label>Td</label><input id="td" type="range" min="0" max="300" step="1" value="25"><input id="tdn" type="number" value="25" step="1"></div>
-<div class="actions" style="margin-top:10px"><button id="base" class="secondary">기본 PID</button><button id="compare" class="secondary">기본값 비교 ON</button></div>
-<p class="hint">기본 PID: Kc=0.3, Ti=200 s, Td=25 s. 출력 포화 시 적분 누적 정지를 지원합니다.</p>
-</section>
+  <section class="panel">
+    <h2>공정 모델</h2>
+    <label>모델
+      <select id="model">
+        <option value="fopdt">FOPDT</option>
+        <option value="custom">Custom ODE</option>
+      </select>
+    </label>
+    <div id="fopdt">
+      <label>초기 온도 T0 [℃]<input id="initial" type="number" value="25"></label>
+      <label>기준/주변 온도 [℃]<input id="bias" type="number" value="25"></label>
+      <div class="row2">
+        <label>시정수 τ [s]<input id="tau" type="number" value="300" min="0.01"></label>
+        <label>공정 이득 K<input id="gain" type="number" value="16" step="0.1"></label>
+      </div>
+      <label>시간지연 L [s]<input id="delay" type="number" value="30" min="0"></label>
+      <div class="callout">기본 공정: 300·dT/dt = −(T−25) + 16·u(t−30)</div>
+    </div>
+    <div id="custom" class="hidden">
+      <label>초기값 y0<input id="cinitial" type="number" value="25"></label>
+      <label>시간지연 L [s]<input id="cdelay" type="number" value="30" min="0"></label>
+      <label>dy/dt 식<textarea id="equation">(-(y - 25) + 16*u) / 300</textarea></label>
+      <p class="hint">변수: y, u, t, sp, Math. 예: (-0.02*y + 0.5*u)</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>시뮬레이션 조건</h2>
+    <div class="row2">
+      <label>설정값 SP [℃]<input id="sp" type="number" value="1000"></label>
+      <label>총 시간 [s]<input id="duration" type="number" value="5400" min="10" max="20000"></label>
+    </div>
+    <div class="row2">
+      <label>시간간격 dt [s]<input id="dt" type="number" value="1" min="0.05" max="10" step="0.05"></label>
+      <label>Anti-windup
+        <select id="aw"><option value="on">ON</option><option value="off">OFF</option></select>
+      </label>
+    </div>
+    <div class="row2">
+      <label>출력 최소 [%]<input id="umin" type="number" value="0"></label>
+      <label>출력 최대 [%]<input id="umax" type="number" value="100"></label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>ON/OFF</h2>
+    <label>히스테리시스 ± [℃]<input id="hys" type="number" value="5" min="0" step="0.5"></label>
+    <p class="hint">기본: T&lt;995℃ → 100%, T&gt;1005℃ → 0%, 사이에서는 직전 출력 유지.</p>
+  </section>
+
+  <section class="panel">
+    <h2>P Tuning</h2>
+    <div class="tune"><label>Kp</label><input id="pk" type="range" min="0" max="2" step="0.005" value="0.3"><input id="pkn" type="number" value="0.3" step="0.005"></div>
+    <p class="hint">기본 P: u = 0.3·e</p>
+  </section>
+
+  <section class="panel">
+    <h2>PI Tuning</h2>
+    <div class="tune"><label>Kc</label><input id="pikc" type="range" min="0" max="2" step="0.005" value="0.3"><input id="pikcn" type="number" value="0.3" step="0.005"></div>
+    <div class="tune"><label>Ti</label><input id="piti" type="range" min="1" max="1000" step="1" value="200"><input id="pitin" type="number" value="200" step="1"></div>
+  </section>
+
+  <section class="panel">
+    <h2>PID Tuning</h2>
+    <div class="tune"><label>Kc</label><input id="pidkc" type="range" min="0" max="2" step="0.005" value="0.3"><input id="pidkcn" type="number" value="0.3" step="0.005"></div>
+    <div class="tune"><label>Ti</label><input id="pidti" type="range" min="1" max="1000" step="1" value="200"><input id="pidtin" type="number" value="200" step="1"></div>
+    <div class="tune"><label>Td</label><input id="pidtd" type="range" min="0" max="300" step="1" value="25"><input id="pidtdn" type="number" value="25" step="1"></div>
+    <p class="hint">기본: Kc=0.3, Ti=200 s, Td=25 s · 출력 포화 시 적분 누적 정지.</p>
+  </section>
 </aside>
+
 <main class="main">
-<div id="status" class="status">계산 준비</div>
-<section class="metrics">
-<div class="metric"><span>최종값</span><b id="mfinal">—</b></div><div class="metric"><span>최종오차</span><b id="merr">—</b></div>
-<div class="metric"><span>오버슈트</span><b id="mover">—</b></div><div class="metric"><span>±2% 정착시간</span><b id="mset">—</b></div>
-<div class="metric"><span>IAE</span><b id="miae">—</b></div><div class="metric"><span>포화시간</span><b id="msat">—</b></div>
-</section>
-<section class="chart"><h2>공정 응답</h2><div class="legend">파랑: 현재 PID · 주황: 기본 PID · 회색 점선: Setpoint</div><canvas id="response" width="1200" height="500"></canvas></section>
-<section class="chart"><h2>제어 출력</h2><canvas id="output" width="1200" height="280"></canvas></section>
-<section class="panel"><h2>현재 설정 해석</h2><p id="analysis" class="hint"></p></section>
+  <div id="status" class="status">계산 준비</div>
+
+  <div class="section-title">
+    <div><h2>과제 기준 결과</h2><p>요청한 기본 공정과 조건으로 ON/OFF · P · PID를 계산하며, PI는 추가 비교로 함께 제공합니다.</p></div>
+    <span class="badge">Euler · dt 1 s · 5400 s</span>
+  </div>
+
+  <section class="metrics">
+    <div class="metric"><span>ON/OFF 진동폭 · 마지막 30분</span><b id="osc">—</b><small id="oscsub">—</small></div>
+    <div class="metric"><span>P 잔류편차</span><b id="pres">—</b><small id="pressub">—</small></div>
+    <div class="metric"><span>PID 최종오차</span><b id="piderr">—</b><small id="piderrsub">—</small></div>
+    <div class="metric"><span>PI 최종오차</span><b id="pierr">—</b><small id="pierrsub">추가 비교용</small></div>
+  </section>
+
+  <section class="chart">
+    <h2>1) ON/OFF 온도 전체 곡선</h2>
+    <div class="legend">빨강: ON/OFF 온도 응답</div>
+    <canvas id="onoffFull" width="1200" height="430"></canvas>
+  </section>
+
+  <section class="chart">
+    <h2>2) 40~70분 확대 — 온도 + 히터 출력</h2>
+    <div class="legend">빨강: 온도 [℃] · 주황: 히터 출력 [%] · 출력은 0/100% 계단 형태</div>
+    <canvas id="onoffZoom" width="1200" height="450"></canvas>
+  </section>
+
+  <section class="chart">
+    <h2>3) ON/OFF · P · PID 온도 비교</h2>
+    <div class="legend">빨강: ON/OFF · 초록: P(0.3) · 파랑: PID(0.3, 200s, 25s) · 회색 점선: SP · y축 750~1100℃</div>
+    <canvas id="compareChart" width="1200" height="470"></canvas>
+  </section>
+
+  <div class="section-title">
+    <div><h2>실시간 Tuning + 그래프 이력</h2><p>슬라이더를 움직이면 즉시 반영되고, 값을 확정할 때마다 해당 응답 곡선이 추가됩니다. 최근 6개까지 보관합니다.</p></div>
+  </div>
+
+  <section class="chart tune-card p">
+    <h2>P 제어 응답</h2>
+    <div class="mini"><span>최종값 <b id="pfinal">—</b></span><span>최종오차 <b id="perr">—</b></span><span>오버슈트 <b id="pover">—</b></span></div>
+    <div id="plegend" class="trace-legend"></div>
+    <canvas id="pchart" width="1200" height="360"></canvas>
+  </section>
+
+  <section class="chart tune-card pi">
+    <h2>PI 제어 응답</h2>
+    <div class="mini"><span>최종값 <b id="pifinal">—</b></span><span>최종오차 <b id="pierr2">—</b></span><span>오버슈트 <b id="piover">—</b></span></div>
+    <div id="pilegend" class="trace-legend"></div>
+    <canvas id="pichart" width="1200" height="360"></canvas>
+  </section>
+
+  <section class="chart tune-card pid">
+    <h2>PID 제어 응답</h2>
+    <div class="mini"><span>최종값 <b id="pidfinal">—</b></span><span>최종오차 <b id="piderr2">—</b></span><span>오버슈트 <b id="pidover">—</b></span></div>
+    <div id="pidlegend" class="trace-legend"></div>
+    <canvas id="pidchart" width="1200" height="360"></canvas>
+  </section>
+
+  <section class="panel">
+    <div class="section-title">
+      <div><h2>시간별 시뮬레이션 수치표</h2><p>엑셀 표처럼 시간별 온도와 히터 출력을 한눈에 비교합니다.</p></div>
+    </div>
+    <div class="table-toolbar">
+      <div class="left">
+        <label style="margin:0;display:flex;align-items:center;gap:7px">표시 간격
+          <select id="tableStep" style="width:auto;min-width:110px">
+            <option value="1">1초</option>
+            <option value="10">10초</option>
+            <option value="30">30초</option>
+            <option value="60" selected>1분</option>
+            <option value="300">5분</option>
+          </select>
+        </label>
+        <span id="tableMeta" class="table-note"></span>
+      </div>
+      <div class="right"><button id="tableCsv" class="secondary">현재 표 CSV 저장</button></div>
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th rowspan="2">시간 [min]</th>
+            <th colspan="2" class="group-onoff">ON/OFF</th>
+            <th colspan="2" class="group-p">P</th>
+            <th colspan="2" class="group-pi">PI</th>
+            <th colspan="2" class="group-pid">PID</th>
+          </tr>
+          <tr>
+            <th>T [℃]</th><th>u [%]</th>
+            <th>T [℃]</th><th>u [%]</th>
+            <th>T [℃]</th><th>u [%]</th>
+            <th>T [℃]</th><th>u [%]</th>
+          </tr>
+        </thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+    </div>
+    <p class="table-note">P/PI/PID 열은 현재 튜닝값을 반영합니다. 표시 간격을 1초로 바꾸면 전체 5400초 데이터를 거의 그대로 확인할 수 있습니다.</p>
+  </section>
 </main>
 </div>
-<script>
-(function(){
-'use strict';
-var $=function(id){return document.getElementById(id)}, timer=null,last=null,showBase=true;
-var d={initial:25,bias:25,tau:300,gain:16,delay:30,sp:1000,duration:5400,dt:1,umin:0,umax:100,kc:.3,ti:200,td:25,cinitial:25,cdelay:30,equation:'(-(y - 25) + 16*u) / 300'};
-var baseline={kc:.3,ti:200,td:25};
-function n(id,fb){var v=Number($(id).value);return Number.isFinite(v)?v:fb}
-function clamp(v,a,b){return Math.min(b,Math.max(a,v))}
-function sync(r,num){$(r).addEventListener('input',function(){$(num).value=this.value;schedule()});$(num).addEventListener('input',function(){var v=Number(this.value);if(Number.isFinite(v))$(r).value=clamp(v,Number($(r).min),Number($(r).max));schedule()})}
-sync('kc','kcn');sync('ti','tin');sync('td','tdn');
-function config(){
-var c={model:$('model').value,sp:n('sp',1000),duration:n('duration',5400),dt:n('dt',1),umin:n('umin',0),umax:n('umax',100),aw:$('aw').value==='on',pid:{kc:n('kcn',.3),ti:n('tin',200),td:n('tdn',25)}};
-if(!(c.dt>0)||!(c.duration>0)||c.duration/c.dt>120000)throw Error('dt 또는 총 시간을 확인하세요. 최대 120,000 step입니다.');
-if(!(c.umax>c.umin))throw Error('출력 최대값은 최소값보다 커야 합니다.');
-if(c.pid.kc<0||c.pid.ti<=0||c.pid.td<0)throw Error('Kc≥0, Ti>0, Td≥0 조건이 필요합니다.');
-if(c.model==='fopdt'){c.initial=n('initial',25);c.bias=n('bias',25);c.tau=n('tau',300);c.gain=n('gain',16);c.delay=Math.max(0,n('delay',30));if(c.tau<=0)throw Error('τ는 0보다 커야 합니다.')}
-else{c.initial=n('cinitial',25);c.delay=Math.max(0,n('cdelay',30));c.eq=$('equation').value.trim();if(!c.eq)throw Error('Custom ODE 식을 입력하세요.');if(!/^[0-9A-Za-z_+\-*/()., ^]+$/.test(c.eq))throw Error('Custom ODE에 허용되지 않은 문자가 있습니다.');c.fn=new Function('y','u','t','sp','Math','return ('+c.eq+')')}
-return c}
-function deriv(c,y,u,t){if(c.model==='fopdt')return (-(y-c.bias)+c.gain*u)/c.tau;var v=c.fn(y,u,t,c.sp,Math);if(!Number.isFinite(v))throw Error('Custom ODE 계산 결과가 유한수가 아닙니다.');return v}
-function sim(c,p){
-p=p||c.pid;var steps=Math.floor(c.duration/c.dt)+1,t=new Float64Array(steps),y=new Float64Array(steps),u=new Float64Array(steps),e=new Float64Array(steps);y[0]=c.initial;
-var ds=Math.max(0,Math.round(c.delay/c.dt)),integ=0,prev=c.sp-y[0],sat=0;
-for(var i=0;i<steps;i++){t[i]=i*c.dt;var er=c.sp-y[i];e[i]=er;var de=i?(er-prev)/c.dt:0;var cand=integ+er*c.dt;var raw=p.kc*(er+cand/p.ti+p.td*de);var ctrl=clamp(raw,c.umin,c.umax);var saturated=Math.abs(ctrl-raw)>1e-10;
-if(!(c.aw&&saturated))integ=cand;if(c.aw&&saturated){raw=p.kc*(er+integ/p.ti+p.td*de);ctrl=clamp(raw,c.umin,c.umax)}u[i]=ctrl;if(ctrl<=c.umin+1e-8||ctrl>=c.umax-1e-8)sat+=c.dt;
-if(i<steps-1){var j=i-ds,du=j>=0?u[j]:0,next=y[i]+c.dt*deriv(c,y[i],du,t[i]);if(!Number.isFinite(next)||Math.abs(next)>1e12)throw Error('응답이 발산했습니다. 공정식 또는 PID 값을 확인하세요.');y[i+1]=next}prev=er}
-return{t:t,y:y,u:u,e:e,sat:sat}}
-function metrics(c,r){var max=-Infinity,iae=0;for(var i=0;i<r.y.length;i++){if(r.y[i]>max)max=r.y[i];iae+=Math.abs(r.e[i])*c.dt}var fin=r.y[r.y.length-1],err=c.sp-fin,span=Math.abs(c.sp-c.initial),ov=span?Math.max(0,(max-c.sp)/span*100):0,band=Math.max(Math.abs(c.sp)*.02,1e-9),lastOut=-1;for(i=0;i<r.y.length;i++)if(Math.abs(r.y[i]-c.sp)>band)lastOut=i;var set=lastOut<r.y.length-1?r.t[Math.min(r.t.length-1,lastOut+1)]:null;return{fin:fin,err:err,ov:ov,iae:iae,set:set,sat:r.sat}}
-function fmt(v,dg){if(v==null||!Number.isFinite(v))return'—';return v.toLocaleString('ko-KR',{minimumFractionDigits:dg,maximumFractionDigits:dg})}
-function draw(cv,series,opt){opt=opt||{};var ctx=cv.getContext('2d'),w=cv.clientWidth||800,ratio=Math.max(1,window.devicePixelRatio||1),h=w*(Number(cv.getAttribute('height'))||400)/1200,p={l:58,r:15,t:15,b:34};cv.width=w*ratio;cv.height=h*ratio;ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,w,h);ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);
-var xmax=series[0].x[series[0].x.length-1]||1,ymin=Infinity,ymax=-Infinity;series.forEach(function(s){if(s.hide)return;for(var i=0;i<s.y.length;i++){var v=s.y[i];if(Number.isFinite(v)){ymin=Math.min(ymin,v);ymax=Math.max(ymax,v)}}});if(opt.ymin!=null)ymin=opt.ymin;if(opt.ymax!=null)ymax=opt.ymax;if(ymin===ymax){ymin--;ymax++}var mg=(ymax-ymin)*.05;if(opt.ymin==null)ymin-=mg;if(opt.ymax==null)ymax+=mg;
-var X=function(x){return p.l+x/xmax*(w-p.l-p.r)},Y=function(y){return p.t+(ymax-y)/(ymax-ymin)*(h-p.t-p.b)};ctx.font='11px system-ui';ctx.strokeStyle='#e5e7eb';ctx.fillStyle='#667085';
-for(var k=0;k<=5;k++){var yy=p.t+(h-p.t-p.b)*k/5;ctx.beginPath();ctx.moveTo(p.l,yy);ctx.lineTo(w-p.r,yy);ctx.stroke();ctx.fillText(fmt(ymax-(ymax-ymin)*k/5,opt.out?0:1),5,yy+4)}
-for(k=0;k<=6;k++){var xx=p.l+(w-p.l-p.r)*k/6;ctx.beginPath();ctx.moveTo(xx,p.t);ctx.lineTo(xx,h-p.b);ctx.stroke();ctx.fillText(fmt(xmax*k/6/60,0),xx-7,h-10)}
-ctx.fillText('Time [min]',w/2-25,h-2);series.forEach(function(s){if(s.hide)return;ctx.strokeStyle=s.color;ctx.lineWidth=s.width||2;ctx.setLineDash(s.dash||[]);ctx.beginPath();var stride=Math.max(1,Math.floor(s.x.length/Math.max(700,w*2))),started=false;for(var i=0;i<s.x.length;i+=stride){var x=X(s.x[i]),y=Y(s.y[i]);if(!started){ctx.moveTo(x,y);started=true}else ctx.lineTo(x,y)}ctx.stroke()});ctx.setLineDash([]);ctx.strokeStyle='#98a2b3';ctx.strokeRect(p.l,p.t,w-p.l-p.r,h-p.t-p.b)}
-function explain(c,m){var a=[];a.push(Math.abs(m.err)<=Math.max(.5,Math.abs(c.sp)*.001)?'최종 오차가 매우 작습니다.':'최종 오차가 '+fmt(m.err,2)+' 남아 있습니다.');a.push(m.ov>10?'오버슈트가 큰 편입니다.':m.ov>.5?'오버슈트는 '+fmt(m.ov,2)+'%입니다.':'오버슈트가 거의 없습니다.');a.push(m.set==null?'종료 시점까지 ±2% 범위에 정착하지 못했습니다.':'±2% 정착시간은 약 '+fmt(m.set/60,1)+'분입니다.');if(m.sat>c.duration*.25)a.push('출력 포화가 길어 액추에이터 한계와 튜닝값을 함께 확인하세요.');return a.join(' ')}
-function run(){var st=$('status');try{st.className='status';st.textContent='계산 중…';var c=config(),r=sim(c),m=metrics(c,r),b=showBase?sim(c,baseline):null,sp=new Float64Array(r.t.length);sp.fill(c.sp);$('mfinal').textContent=fmt(m.fin,2);$('merr').textContent=fmt(m.err,2);$('mover').textContent=fmt(m.ov,2)+'%';$('mset').textContent=m.set==null?'미정착':fmt(m.set/60,1)+' min';$('miae').textContent=fmt(m.iae,0);$('msat').textContent=fmt(m.sat/60,1)+' min';$('analysis').textContent=explain(c,m);draw($('response'),[{x:r.t,y:r.y,color:'#2563eb'},{x:b?b.t:r.t,y:b?b.y:r.y,color:'#f59e0b',hide:!showBase},{x:r.t,y:sp,color:'#64748b',dash:[7,5],width:1.5}]);draw($('output'),[{x:r.t,y:r.u,color:'#2563eb'}],{ymin:c.umin,ymax:c.umax,out:true});last={c:c,r:r};st.textContent='계산 완료 · '+r.t.length.toLocaleString('ko-KR')+' steps'}catch(e){st.className='status err';st.textContent=e.message||String(e)}}
-function schedule(){clearTimeout(timer);timer=setTimeout(run,60)}
-['model','initial','bias','tau','gain','delay','cinitial','cdelay','equation','sp','duration','dt','umin','umax','aw'].forEach(function(id){$(id).addEventListener(id==='model'||id==='aw'?'change':'input',function(){if(id==='model'){var cust=this.value==='custom';$('custom').classList.toggle('hidden',!cust);$('fopdt').classList.toggle('hidden',cust)}schedule()})});
-$('base').addEventListener('click',function(){$('kc').value=$('kcn').value=.3;$('ti').value=$('tin').value=200;$('td').value=$('tdn').value=25;run()});
-$('compare').addEventListener('click',function(){showBase=!showBase;this.textContent='기본값 비교 '+(showBase?'ON':'OFF');run()});
-$('reset').addEventListener('click',function(){Object.keys(d).forEach(function(k){if($(k))$(k).value=d[k]});$('model').value='fopdt';$('aw').value='on';$('kc').value=$('kcn').value=.3;$('ti').value=$('tin').value=200;$('td').value=$('tdn').value=25;$('fopdt').classList.remove('hidden');$('custom').classList.add('hidden');run()});
-$('csv').addEventListener('click',function(){if(!last)return;var r=last.r,s='time_s,process_value,controller_output,error\n';for(var i=0;i<r.t.length;i++)s+=r.t[i]+','+r.y[i]+','+r.u[i]+','+r.e[i]+'\n';var url=URL.createObjectURL(new Blob([s],{type:'text/csv'})),a=document.createElement('a');a.href=url;a.download='pid_simulation.csv';a.click();setTimeout(function(){URL.revokeObjectURL(url)},500)});
-window.addEventListener('resize',schedule);run();
-})();
-</script>
-</body></html>
+
+<script src="app.js"></script>
+</body>
+</html>
