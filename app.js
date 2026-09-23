@@ -202,9 +202,10 @@ function drawTuning(kind,c,currentResult,baseResult){
  drawLine($(kind+"chart"),series,{height:360});
  renderHistoryLegend(kind,params);
  var m=perf(c,currentResult);
- $(kind+"final").textContent=fmt(m.fin,2)+" ℃";
- $(kind+"err").textContent=fmt(m.err,2)+" ℃";
- $(kind+"over").textContent=fmt(m.ov,2)+" %";
+ var ids=kind==="p"?{f:"pfinal",e:"perr",o:"pover"}:(kind==="pi"?{f:"pifinal",e:"pierr2",o:"piover"}:{f:"pidfinal",e:"piderr2",o:"pidover"});
+ $(ids.f).textContent=fmt(m.fin,2)+" ℃";
+ $(ids.e).textContent=fmt(m.err,2)+" ℃";
+ $(ids.o).textContent=fmt(m.ov,2)+" %";
 }
 
 function saveTrace(kind){
