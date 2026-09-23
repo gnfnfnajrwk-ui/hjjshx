@@ -160,26 +160,6 @@ function drawLine(cv,series,opt){
   ctx.beginPath();ctx.moveTo(p.l,spy);ctx.lineTo(w-p.r,spy);ctx.stroke();ctx.setLineDash([]);
  }
  ctx.restore();ctx.globalAlpha=1;ctx.setLineDash([]);
- if(opt.setpoint!=null && Number.isFinite(opt.setpoint) && opt.setpoint>=ymin && opt.setpoint<=ymax){
-  var spy2=Y(opt.setpoint),splabel="목표값 "+fmt(opt.setpoint,0)+"℃";
-  ctx.font="bold 12px system-ui";var sptw=ctx.measureText(splabel).width;
-  var sptx=w-p.r-sptw-8;
-  ctx.fillStyle="#fff";ctx.globalAlpha=.96;ctx.fillRect(sptx-5,spy2-15,sptw+10,19);
-  ctx.globalAlpha=1;ctx.fillStyle="#111827";ctx.fillText(splabel,sptx,spy2-2);
-  ctx.fillStyle="#111827";ctx.font="bold 11px system-ui";ctx.fillText(fmt(opt.setpoint,0),Math.max(4,p.l-44),spy2+4);
- }
- series.forEach(function(a){
-  if(a.hide||!a.annotation)return;
-  var ay=null;
-  for(var q=a.y.length-1;q>=0;q--){if(Number.isFinite(a.y[q])){ay=a.y[q];break}}
-  if(ay==null||ay<ymin||ay>ymax)return;
-  var py=Y(ay);
-  ctx.font="bold 11px system-ui";ctx.fillStyle=a.color||"#475467";
-  var label=a.annotation,tw=ctx.measureText(label).width;
-  var tx=Math.max(p.l+5,w-p.r-tw-7);
-  ctx.fillStyle="#ffffff";ctx.globalAlpha=.88;ctx.fillRect(tx-4,py-13,tw+8,17);
-  ctx.globalAlpha=1;ctx.fillStyle=a.color||"#475467";ctx.fillText(label,tx,py-1);
- });
  ctx.strokeStyle="#98a2b3";ctx.strokeRect(p.l,p.t,w-p.l-p.r,h-p.t-p.b);
 }
 
@@ -207,8 +187,6 @@ function drawDual(cv,temp,output,c){
  for(i=0;i<output.x.length;i++){if(output.x[i]<xmin||output.x[i]>xmax)continue;px=X(output.x[i]);py=YO(output.y[i]);if(!started){ctx.moveTo(px,py);started=true}else{ctx.lineTo(px,lastY);ctx.lineTo(px,py)}lastY=py}ctx.stroke();
  ctx.strokeStyle="#111827";ctx.lineWidth=2.2;ctx.setLineDash([8,5]);ctx.beginPath();ctx.moveTo(p.l,YT(c.sp));ctx.lineTo(w-p.r,YT(c.sp));ctx.stroke();ctx.setLineDash([]);
  ctx.restore();
- ctx.font="bold 11px system-ui";var splabel="목표값 "+fmt(c.sp,0)+"℃",tw=ctx.measureText(splabel).width,spy=YT(c.sp);
- ctx.fillStyle="#fff";ctx.globalAlpha=.88;ctx.fillRect(w-p.r-tw-11,spy-13,tw+8,17);ctx.globalAlpha=1;ctx.fillStyle="#111827";ctx.fillText(splabel,w-p.r-tw-7,spy-1);
  ctx.strokeStyle="#98a2b3";ctx.strokeRect(p.l,p.t,w-p.l-p.r,h-p.t-p.b);
 }
 
