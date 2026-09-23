@@ -154,7 +154,20 @@ function drawLine(cv,series,opt){
   }
   ctx.stroke();
  });
+ if(opt.setpoint!=null && Number.isFinite(opt.setpoint) && opt.setpoint>=ymin && opt.setpoint<=ymax){
+  var spy=Y(opt.setpoint);
+  ctx.strokeStyle="#111827";ctx.globalAlpha=1;ctx.lineWidth=2.2;ctx.setLineDash([8,5]);
+  ctx.beginPath();ctx.moveTo(p.l,spy);ctx.lineTo(w-p.r,spy);ctx.stroke();ctx.setLineDash([]);
+ }
  ctx.restore();ctx.globalAlpha=1;ctx.setLineDash([]);
+ if(opt.setpoint!=null && Number.isFinite(opt.setpoint) && opt.setpoint>=ymin && opt.setpoint<=ymax){
+  var spy2=Y(opt.setpoint),splabel="목표값 "+fmt(opt.setpoint,0)+"℃";
+  ctx.font="bold 12px system-ui";var sptw=ctx.measureText(splabel).width;
+  var sptx=w-p.r-sptw-8;
+  ctx.fillStyle="#fff";ctx.globalAlpha=.96;ctx.fillRect(sptx-5,spy2-15,sptw+10,19);
+  ctx.globalAlpha=1;ctx.fillStyle="#111827";ctx.fillText(splabel,sptx,spy2-2);
+  ctx.fillStyle="#111827";ctx.font="bold 11px system-ui";ctx.fillText(fmt(opt.setpoint,0),Math.max(4,p.l-44),spy2+4);
+ }
  series.forEach(function(a){
   if(a.hide||!a.annotation)return;
   var ay=null;
@@ -192,10 +205,10 @@ function drawDual(cv,temp,output,c){
  for(i=0;i<temp.x.length;i++){if(temp.x[i]<xmin||temp.x[i]>xmax)continue;var px=X(temp.x[i]),py=YT(temp.y[i]);if(!started){ctx.moveTo(px,py);started=true}else ctx.lineTo(px,py)}ctx.stroke();
  ctx.strokeStyle=colors.output;ctx.lineWidth=1.8;ctx.beginPath();started=false;var lastY=0;
  for(i=0;i<output.x.length;i++){if(output.x[i]<xmin||output.x[i]>xmax)continue;px=X(output.x[i]);py=YO(output.y[i]);if(!started){ctx.moveTo(px,py);started=true}else{ctx.lineTo(px,lastY);ctx.lineTo(px,py)}lastY=py}ctx.stroke();
- ctx.strokeStyle=colors.sp;ctx.lineWidth=1.6;ctx.setLineDash([7,5]);ctx.beginPath();ctx.moveTo(p.l,YT(c.sp));ctx.lineTo(w-p.r,YT(c.sp));ctx.stroke();ctx.setLineDash([]);
+ ctx.strokeStyle="#111827";ctx.lineWidth=2.2;ctx.setLineDash([8,5]);ctx.beginPath();ctx.moveTo(p.l,YT(c.sp));ctx.lineTo(w-p.r,YT(c.sp));ctx.stroke();ctx.setLineDash([]);
  ctx.restore();
- ctx.font="bold 11px system-ui";var splabel="SP = "+fmt(c.sp,0)+"℃",tw=ctx.measureText(splabel).width,spy=YT(c.sp);
- ctx.fillStyle="#fff";ctx.globalAlpha=.88;ctx.fillRect(w-p.r-tw-11,spy-13,tw+8,17);ctx.globalAlpha=1;ctx.fillStyle=colors.sp;ctx.fillText(splabel,w-p.r-tw-7,spy-1);
+ ctx.font="bold 11px system-ui";var splabel="목표값 "+fmt(c.sp,0)+"℃",tw=ctx.measureText(splabel).width,spy=YT(c.sp);
+ ctx.fillStyle="#fff";ctx.globalAlpha=.88;ctx.fillRect(w-p.r-tw-11,spy-13,tw+8,17);ctx.globalAlpha=1;ctx.fillStyle="#111827";ctx.fillText(splabel,w-p.r-tw-7,spy-1);
  ctx.strokeStyle="#98a2b3";ctx.strokeRect(p.l,p.t,w-p.l-p.r,h-p.t-p.b);
 }
 
@@ -220,7 +233,7 @@ function drawTuning(kind,c,currentResult,baseResult){
  series.push({x:currentResult.t,y:currentResult.y,color:colors[kind],width:2.7});
  var spLine=new Float64Array(currentResult.t.length);spLine.fill(c.sp);
  series.push({x:currentResult.t,y:spLine,color:colors.sp,dash:[7,5],width:1.5,annotation:"SP = "+fmt(c.sp,0)+"℃"});
- drawLine($(kind+"chart"),series,{height:360});
+ drawLine($(kind+"chart"),series,{height:360,setpoint:c.sp});
  renderHistoryLegend(kind,params);
  var m=perf(c,currentResult);
  var ids=kind==="p"?{f:"pfinal",e:"perr",o:"pover"}:(kind==="pi"?{f:"pifinal",e:"pierr2",o:"piover"}:{f:"pidfinal",e:"piderr2",o:"pidover"});
@@ -307,14 +320,14 @@ function runAll(){
   drawLine($("onoffFull"),[
    {x:baseOn.t,y:baseOn.y,color:colors.onoff,width:2.2},
    {x:baseOn.t,y:spArr,color:colors.sp,dash:[7,5],width:1.5,annotation:"SP = "+fmt(c.sp,0)+"℃"}
-  ],{height:430});
+  ],{height:430,setpoint:c.sp});
   drawDual($("onoffZoom"),{x:baseOn.t,y:baseOn.y},{x:baseOn.t,y:baseOn.u},c);
   drawLine($("compareChart"),[
    {x:baseOn.t,y:baseOn.y,color:colors.onoff,width:2},
    {x:baseP.t,y:baseP.y,color:colors.p,width:2},
    {x:basePID.t,y:basePID.y,color:colors.pid,width:2},
    {x:baseOn.t,y:spArr,color:colors.sp,dash:[7,5],width:1.5,annotation:"SP = "+fmt(c.sp,0)+"℃"}
-  ],{height:470,ymin:750,ymax:1100});
+  ],{height:470,ymin:750,ymax:1100,setpoint:c.sp});
   drawTuning("p",c,curP,baseP);
   drawTuning("pi",c,curPI,basePI);
   drawTuning("pid",c,curPID,basePID);
