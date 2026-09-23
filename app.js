@@ -65,17 +65,26 @@ function simulate(c,kind,p){
    else ctrl=prevU;
   }else if(kind==="p"){
    ctrl=clamp(p.kp*err,c.umin,c.umax);
-  }else{
+  }else if(kind==="pi"){
+   var candPI=integ+err*c.dt;
+   var rawPI=p.kc*(err+candPI/p.ti);
+   ctrl=clamp(rawPI,c.umin,c.umax);
+   var saturatedPI=Math.abs(ctrl-rawPI)>1e-10;
+   if(!(c.aw&&saturatedPI))integ=candPI;
+   if(c.aw&&saturatedPI){
+    rawPI=p.kc*(err+integ/p.ti);
+    ctrl=clamp(rawPI,c.umin,c.umax);
+   }
+  }else if(kind==="pid"){
    var de=i?(err-prevErr)/c.dt:0;
-   var cand=integ+err*c.dt;
-   var td=kind==="pi"?0:p.td;
-   var raw=p.kc*(err+cand/p.ti+td*de);
-   ctrl=clamp(raw,c.umin,c.umax);
-   var saturated=Math.abs(ctrl-raw)>1e-10;
-   if(!(c.aw&&saturated))integ=cand;
-   if(c.aw&&saturated){
-    raw=p.kc*(err+integ/p.ti+td*de);
-    ctrl=clamp(raw,c.umin,c.umax);
+   var candPID=integ+err*c.dt;
+   var rawPID=p.kc*(err+candPID/p.ti+p.td*de);
+   ctrl=clamp(rawPID,c.umin,c.umax);
+   var saturatedPID=Math.abs(ctrl-rawPID)>1e-10;
+   if(!(c.aw&&saturatedPID))integ=candPID;
+   if(c.aw&&saturatedPID){
+    rawPID=p.kc*(err+integ/p.ti+p.td*de);
+    ctrl=clamp(rawPID,c.umin,c.umax);
    }
   }
   u[i]=ctrl;prevU=ctrl;
@@ -197,8 +206,11 @@ function paramLabel(kind,p){
 }
 
 function renderHistoryLegend(kind,current){
- var el=$(kind+"legend"),parts=[];
- parts.push('<span><i class="dot" style="background:'+colors.base+'"></i>기본 '+paramLabel(kind,fixed[kind])+'</span>');
+ var el=$(kind+"legend"),parts=[],f=fixed[kind];
+ var isDefault=kind==="p"?Math.abs(current.kp-f.kp)<1e-12:
+   (kind==="pi"?Math.abs(current.kc-f.kc)<1e-12&&Math.abs(current.ti-f.ti)<1e-12:
+   Math.abs(current.kc-f.kc)<1e-12&&Math.abs(current.ti-f.ti)<1e-12&&Math.abs(current.td-f.td)<1e-12);
+ if(!isDefault)parts.push('<span><i class="dot" style="background:'+colors.base+'"></i>기본 '+paramLabel(kind,fixed[kind])+'</span>');
  histories[kind].forEach(function(h,i){parts.push('<span><i class="dot" style="background:'+historyColors[i%historyColors.length]+'"></i>'+h.label+'</span>')});
  parts.push('<span><i class="dot" style="background:'+colors[kind]+'"></i>현재 '+paramLabel(kind,current)+'</span>');
  parts.push('<span><i class="dot" style="background:'+colors.sp+'"></i>목표값 SP</span>');
@@ -206,7 +218,11 @@ function renderHistoryLegend(kind,current){
 }
 
 function drawTuning(kind,c,currentResult,baseResult){
- var params=currentParams(kind),series=[{x:baseResult.t,y:baseResult.y,color:colors.base,dash:[7,5],width:1.5,alpha:.8}];
+ var params=currentParams(kind),series=[];
+ var f=fixed[kind],isDefault=kind==="p"?Math.abs(params.kp-f.kp)<1e-12:
+   (kind==="pi"?Math.abs(params.kc-f.kc)<1e-12&&Math.abs(params.ti-f.ti)<1e-12:
+   Math.abs(params.kc-f.kc)<1e-12&&Math.abs(params.ti-f.ti)<1e-12&&Math.abs(params.td-f.td)<1e-12);
+ if(!isDefault)series.push({x:baseResult.t,y:baseResult.y,color:colors.base,dash:[7,5],width:1.5,alpha:.8});
  histories[kind].forEach(function(h,i){series.push({x:h.r.t,y:h.r.y,color:historyColors[i%historyColors.length],width:1.5,alpha:.72})});
  series.push({x:currentResult.t,y:currentResult.y,color:colors[kind],width:2.7});
  var spLine=new Float64Array(currentResult.t.length);spLine.fill(c.sp);
