@@ -303,8 +303,9 @@ function runAll(){
   drawLine($("compareChart"),[
    {x:baseOn.t,y:baseOn.y,color:colors.onoff,width:2},
    {x:baseP.t,y:baseP.y,color:colors.p,width:2},
+   {x:basePI.t,y:basePI.y,color:colors.pi,width:2},
    {x:basePID.t,y:basePID.y,color:colors.pid,width:2},
-   {x:baseOn.t,y:spArr,color:colors.sp,dash:[7,5],width:1.5,annotation:"SP = "+fmt(c.sp,0)+"℃"}
+   {x:baseOn.t,y:spArr,color:colors.sp,dash:[7,5],width:1.5}
   ],{height:470,ymin:750,ymax:1100,setpoint:c.sp});
   drawTuning("p",c,curP,baseP);
   drawTuning("pi",c,curPI,basePI);
