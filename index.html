@@ -79,8 +79,8 @@
 
   <section class="panel">
     <h2>PI Tuning</h2>
-    <div class="tune"><label>Kc</label><input id="pikc" type="range" min="0" max="2" step="0.005" value="0.3"><input id="pikcn" type="number" value="0.3" step="0.005"></div>
-    <div class="tune"><label>Ti</label><input id="piti" type="range" min="1" max="1000" step="1" value="200"><input id="pitin" type="number" value="200" step="1"></div>
+    <div class="tune"><label>Kc</label><input id="pikc" type="range" min="0" max="2" step="0.005" value="0.7"><input id="pikcn" type="number" value="0.7" step="0.005"></div>
+    <div class="tune"><label>Ti</label><input id="piti" type="range" min="1" max="1000" step="1" value="80"><input id="pitin" type="number" value="80" step="1"></div>
   </section>
 
   <section class="panel">
@@ -96,7 +96,7 @@
   <div id="status" class="status">계산 준비</div>
 
   <div class="section-title">
-    <div><h2>과제 기준 결과</h2><p>요청한 기본 공정과 조건으로 ON/OFF · P · PID를 계산하고, PI는 Kc=0.3, Ti=200 s로 추가해 함께 비교합니다.</p></div>
+    <div><h2>과제 기준 결과</h2><p>요청한 기본 공정과 조건으로 ON/OFF · P · PID를 계산하고, PI는 Kc=0.7, Ti=80 s의 비교용 튜닝으로 추가합니다.</p></div>
     <span class="badge">Euler · dt 1 s · 5400 s</span>
   </div>
 
@@ -121,7 +121,7 @@
 
   <section class="chart">
     <h2>3) ON/OFF · P · PI · PID 온도 비교</h2>
-    <div class="legend">빨강: ON/OFF · 초록: P(0.3) · 보라: PI(0.3, 200s) · 파랑: PID(0.3, 200s, 25s) · 회색 점선: SP · y축 750~1100℃</div>
+    <div class="legend">빨강: ON/OFF · 초록: P(0.3) · 보라: PI(0.7, 80s) · 파랑: PID(0.3, 200s, 25s) · 회색 점선: SP · y축 750~1100℃</div>
     <canvas id="compareChart" width="1200" height="470"></canvas>
   </section>
 
@@ -194,6 +194,6 @@
 </main>
 </div>
 
-<script src="app.js?v=20260923-5"></script>
+<script src="app.js?v=20260923-6"></script>
 </body>
 </html>
