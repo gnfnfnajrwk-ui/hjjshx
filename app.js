@@ -8,9 +8,9 @@ var historyColors=["#0f766e","#9333ea","#c2410c","#0369a1","#a21caf","#4d7c0f"];
 var histories={p:[],pi:[],pid:[]};
 var defaults={
  model:"fopdt",initial:25,bias:25,tau:300,gain:16,delay:30,cinitial:25,cdelay:30,equation:"(-(y - 25) + 16*u) / 300",
- sp:1000,duration:5400,dt:1,umin:0,umax:100,hys:5,pk:0.3,pikc:0.3,piti:200,pidkc:0.3,pidti:200,pidtd:25,aw:"on"
+ sp:1000,duration:5400,dt:1,umin:0,umax:100,hys:5,pk:0.3,pikc:0.7,piti:80,pidkc:0.3,pidti:200,pidtd:25,aw:"on"
 };
-var fixed={p:{kp:0.3},pi:{kc:0.3,ti:200},pid:{kc:0.3,ti:200,td:25}};
+var fixed={p:{kp:0.3},pi:{kc:0.7,ti:80},pid:{kc:0.3,ti:200,td:25}};
 
 function num(id,fb){var v=Number($(id).value);return Number.isFinite(v)?v:fb}
 function clamp(v,a,b){return Math.min(b,Math.max(a,v))}
@@ -38,7 +38,7 @@ function getConfig(){
 
 function currentParams(kind){
  if(kind==="p")return{kp:Math.max(0,num("pkn",0.3))};
- if(kind==="pi")return{kc:Math.max(0,num("pikcn",0.3)),ti:Math.max(0.0001,num("pitin",200))};
+ if(kind==="pi")return{kc:Math.max(0,num("pikcn",0.7)),ti:Math.max(0.0001,num("pitin",80))};
  return{kc:Math.max(0,num("pidkcn",0.3)),ti:Math.max(0.0001,num("pidtin",200)),td:Math.max(0,num("pidtdn",25))};
 }
 
