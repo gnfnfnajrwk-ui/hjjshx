@@ -88,7 +88,7 @@
     <div class="tune"><label>Kc</label><input id="pidkc" type="range" min="0" max="2" step="0.005" value="0.3"><input id="pidkcn" type="number" value="0.3" step="0.005"></div>
     <div class="tune"><label>Ti</label><input id="pidti" type="range" min="1" max="1000" step="1" value="200"><input id="pidtin" type="number" value="200" step="1"></div>
     <div class="tune"><label>Td</label><input id="pidtd" type="range" min="0" max="300" step="1" value="25"><input id="pidtdn" type="number" value="25" step="1"></div>
-    <p class="hint">기본: Kc=0.3, Ti=200 s, Td=25 s · 출력 포화 시 적분 누적 정지.</p>
+    <p class="hint">원래 PID 조건 그대로: Kc=0.3, Ti=200 s, Td=25 s · u=Kc(e + ∫e/Ti + Td·de/dt) · 출력 포화 시 적분 누적 정지.</p>
   </section>
 </aside>
 
@@ -194,6 +194,6 @@
 </main>
 </div>
 
-<script src="app.js?v=20260923-6"></script>
+<script src="app.js?v=20260923-7"></script>
 </body>
 </html>
