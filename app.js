@@ -154,13 +154,27 @@ function drawLine(cv,series,opt){
   }
   ctx.stroke();
  });
- ctx.restore();ctx.globalAlpha=1;ctx.setLineDash([]);ctx.strokeStyle="#98a2b3";ctx.strokeRect(p.l,p.t,w-p.l-p.r,h-p.t-p.b);
+ ctx.restore();ctx.globalAlpha=1;ctx.setLineDash([]);
+ series.forEach(function(a){
+  if(a.hide||!a.annotation)return;
+  var ay=null;
+  for(var q=a.y.length-1;q>=0;q--){if(Number.isFinite(a.y[q])){ay=a.y[q];break}}
+  if(ay==null||ay<ymin||ay>ymax)return;
+  var py=Y(ay);
+  ctx.font="bold 11px system-ui";ctx.fillStyle=a.color||"#475467";
+  var label=a.annotation,tw=ctx.measureText(label).width;
+  var tx=Math.max(p.l+5,w-p.r-tw-7);
+  ctx.fillStyle="#ffffff";ctx.globalAlpha=.88;ctx.fillRect(tx-4,py-13,tw+8,17);
+  ctx.globalAlpha=1;ctx.fillStyle=a.color||"#475467";ctx.fillText(label,tx,py-1);
+ });
+ ctx.strokeStyle="#98a2b3";ctx.strokeRect(p.l,p.t,w-p.l-p.r,h-p.t-p.b);
 }
 
 function drawDual(cv,temp,output,c){
  var s=canvasSetup(cv,450),ctx=s.ctx,w=s.w,h=s.h,p={l:62,r:54,t:16,b:36},xmin=2400,xmax=4200;
  var tmin=Infinity,tmax=-Infinity;
  for(var i=0;i<temp.x.length;i++)if(temp.x[i]>=xmin&&temp.x[i]<=xmax){tmin=Math.min(tmin,temp.y[i]);tmax=Math.max(tmax,temp.y[i])}
+ tmin=Math.min(tmin,c.sp);tmax=Math.max(tmax,c.sp);
  var mg=(tmax-tmin)*0.12||10;tmin-=mg;tmax+=mg;
  var X=function(x){return p.l+(x-xmin)/(xmax-xmin)*(w-p.l-p.r)};
  var YT=function(y){return p.t+(tmax-y)/(tmax-tmin)*(h-p.t-p.b)};
@@ -178,7 +192,11 @@ function drawDual(cv,temp,output,c){
  for(i=0;i<temp.x.length;i++){if(temp.x[i]<xmin||temp.x[i]>xmax)continue;var px=X(temp.x[i]),py=YT(temp.y[i]);if(!started){ctx.moveTo(px,py);started=true}else ctx.lineTo(px,py)}ctx.stroke();
  ctx.strokeStyle=colors.output;ctx.lineWidth=1.8;ctx.beginPath();started=false;var lastY=0;
  for(i=0;i<output.x.length;i++){if(output.x[i]<xmin||output.x[i]>xmax)continue;px=X(output.x[i]);py=YO(output.y[i]);if(!started){ctx.moveTo(px,py);started=true}else{ctx.lineTo(px,lastY);ctx.lineTo(px,py)}lastY=py}ctx.stroke();
- ctx.restore();ctx.strokeStyle="#98a2b3";ctx.strokeRect(p.l,p.t,w-p.l-p.r,h-p.t-p.b);
+ ctx.strokeStyle=colors.sp;ctx.lineWidth=1.6;ctx.setLineDash([7,5]);ctx.beginPath();ctx.moveTo(p.l,YT(c.sp));ctx.lineTo(w-p.r,YT(c.sp));ctx.stroke();ctx.setLineDash([]);
+ ctx.restore();
+ ctx.font="bold 11px system-ui";var splabel="SP = "+fmt(c.sp,0)+"℃",tw=ctx.measureText(splabel).width,spy=YT(c.sp);
+ ctx.fillStyle="#fff";ctx.globalAlpha=.88;ctx.fillRect(w-p.r-tw-11,spy-13,tw+8,17);ctx.globalAlpha=1;ctx.fillStyle=colors.sp;ctx.fillText(splabel,w-p.r-tw-7,spy-1);
+ ctx.strokeStyle="#98a2b3";ctx.strokeRect(p.l,p.t,w-p.l-p.r,h-p.t-p.b);
 }
 
 function paramLabel(kind,p){
@@ -192,6 +210,7 @@ function renderHistoryLegend(kind,current){
  parts.push('<span><i class="dot" style="background:'+colors.base+'"></i>기본 '+paramLabel(kind,fixed[kind])+'</span>');
  histories[kind].forEach(function(h,i){parts.push('<span><i class="dot" style="background:'+historyColors[i%historyColors.length]+'"></i>'+h.label+'</span>')});
  parts.push('<span><i class="dot" style="background:'+colors[kind]+'"></i>현재 '+paramLabel(kind,current)+'</span>');
+ parts.push('<span><i class="dot" style="background:'+colors.sp+'"></i>목표값 SP</span>');
  el.innerHTML=parts.join("");
 }
 
@@ -199,6 +218,8 @@ function drawTuning(kind,c,currentResult,baseResult){
  var params=currentParams(kind),series=[{x:baseResult.t,y:baseResult.y,color:colors.base,dash:[7,5],width:1.5,alpha:.8}];
  histories[kind].forEach(function(h,i){series.push({x:h.r.t,y:h.r.y,color:historyColors[i%historyColors.length],width:1.5,alpha:.72})});
  series.push({x:currentResult.t,y:currentResult.y,color:colors[kind],width:2.7});
+ var spLine=new Float64Array(currentResult.t.length);spLine.fill(c.sp);
+ series.push({x:currentResult.t,y:spLine,color:colors.sp,dash:[7,5],width:1.5,annotation:"SP = "+fmt(c.sp,0)+"℃"});
  drawLine($(kind+"chart"),series,{height:360});
  renderHistoryLegend(kind,params);
  var m=perf(c,currentResult);
@@ -282,14 +303,17 @@ function runAll(){
   $("pres").textContent=fmt(pm.err,2)+" ℃";$("pressub").textContent="최종 "+fmt(pm.fin,2)+" ℃";
   $("piderr").textContent=fmt(pidm.err,6)+" ℃";$("piderrsub").textContent="최종 "+fmt(pidm.fin,2)+" ℃";
   $("pierr").textContent=fmt(pim.err,4)+" ℃";$("pierrsub").textContent="추가 비교용";
-  drawLine($("onoffFull"),[{x:baseOn.t,y:baseOn.y,color:colors.onoff,width:2.2}],{height:430});
-  drawDual($("onoffZoom"),{x:baseOn.t,y:baseOn.y},{x:baseOn.t,y:baseOn.u},c);
   var spArr=new Float64Array(baseOn.t.length);spArr.fill(c.sp);
+  drawLine($("onoffFull"),[
+   {x:baseOn.t,y:baseOn.y,color:colors.onoff,width:2.2},
+   {x:baseOn.t,y:spArr,color:colors.sp,dash:[7,5],width:1.5,annotation:"SP = "+fmt(c.sp,0)+"℃"}
+  ],{height:430});
+  drawDual($("onoffZoom"),{x:baseOn.t,y:baseOn.y},{x:baseOn.t,y:baseOn.u},c);
   drawLine($("compareChart"),[
    {x:baseOn.t,y:baseOn.y,color:colors.onoff,width:2},
    {x:baseP.t,y:baseP.y,color:colors.p,width:2},
    {x:basePID.t,y:basePID.y,color:colors.pid,width:2},
-   {x:baseOn.t,y:spArr,color:colors.sp,dash:[7,5],width:1.4}
+   {x:baseOn.t,y:spArr,color:colors.sp,dash:[7,5],width:1.5,annotation:"SP = "+fmt(c.sp,0)+"℃"}
   ],{height:470,ymin:750,ymax:1100});
   drawTuning("p",c,curP,baseP);
   drawTuning("pi",c,curPI,basePI);
