@@ -224,6 +224,45 @@ function showError(e){
  var st=$("status");st.className="status err";st.textContent=e.message||String(e);
 }
 
+
+function tableStepSeconds(){
+ var el=$("tableStep"),v=el?Number(el.value):60;
+ return Number.isFinite(v)&&v>0?v:60;
+}
+function renderResultTable(bundle){
+ var body=$("resultBody"),meta=$("tableMeta");
+ if(!body||!bundle)return;
+ var step=tableStepSeconds(),dt=bundle.c.dt,every=Math.max(1,Math.round(step/dt)),rows=[];
+ var total=bundle.onoff.t.length;
+ for(var i=0;i<total;i+=every)rows.push(i);
+ if(rows[rows.length-1]!==total-1)rows.push(total-1);
+ var html="";
+ for(var r=0;r<rows.length;r++){
+  var j=rows[r],tm=bundle.onoff.t[j];
+  html+="<tr>"+
+    "<td>"+fmt(tm/60,2)+"</td>"+
+    "<td>"+fmt(bundle.onoff.y[j],2)+"</td><td>"+fmt(bundle.onoff.u[j],1)+"</td>"+
+    "<td>"+fmt(bundle.p.y[j],2)+"</td><td>"+fmt(bundle.p.u[j],1)+"</td>"+
+    "<td>"+fmt(bundle.pi.y[j],2)+"</td><td>"+fmt(bundle.pi.u[j],1)+"</td>"+
+    "<td>"+fmt(bundle.pid.y[j],2)+"</td><td>"+fmt(bundle.pid.u[j],1)+"</td>"+
+    "</tr>";
+ }
+ body.innerHTML=html;
+ if(meta)meta.textContent="표시 간격 "+step+"초 · "+rows.length.toLocaleString("ko-KR")+"행 · P/PI/PID는 현재 튜닝값 기준";
+}
+function downloadVisibleTableCsv(){
+ if(!lastBundle)return;
+ var step=tableStepSeconds(),dt=lastBundle.c.dt,every=Math.max(1,Math.round(step/dt));
+ var b=lastBundle,s="time_min,onoff_T,onoff_u,P_T,P_u,PI_T,PI_u,PID_T,PID_u\n";
+ for(var i=0;i<b.onoff.t.length;i+=every){
+  s+=(b.onoff.t[i]/60)+","+b.onoff.y[i]+","+b.onoff.u[i]+","+b.p.y[i]+","+b.p.u[i]+","+b.pi.y[i]+","+b.pi.u[i]+","+b.pid.y[i]+","+b.pid.u[i]+"\n";
+ }
+ var last=b.onoff.t.length-1;
+ if(last%every!==0)s+=(b.onoff.t[last]/60)+","+b.onoff.y[last]+","+b.onoff.u[last]+","+b.p.y[last]+","+b.p.u[last]+","+b.pi.y[last]+","+b.pi.u[last]+","+b.pid.y[last]+","+b.pid.u[last]+"\n";
+ var url=URL.createObjectURL(new Blob([s],{type:"text/csv;charset=utf-8"})),a=document.createElement("a");
+ a.href=url;a.download="simulation_table_"+step+"s.csv";a.click();setTimeout(function(){URL.revokeObjectURL(url)},500);
+}
+
 function runAll(){
  var st=$("status");
  try{
@@ -255,7 +294,8 @@ function runAll(){
   drawTuning("pi",c,curPI,basePI);
   drawTuning("pid",c,curPID,basePID);
   lastBundle={c:c,onoff:baseOn,p:curP,pi:curPI,pid:curPID};
-  st.textContent="계산 완료 · 기본 과제 결과 + 현재 튜닝 결과가 갱신되었습니다.";
+  renderResultTable(lastBundle);
+  st.textContent="계산 완료 · 기본 과제 결과 + 현재 튜닝 결과 + 시간별 수치표가 갱신되었습니다.";
  }catch(e){showError(e)}
 }
 
@@ -299,6 +339,8 @@ $("csv").addEventListener("click",function(){
  for(var i=0;i<b.onoff.t.length;i++)s+=b.onoff.t[i]+","+b.onoff.y[i]+","+b.onoff.u[i]+","+b.p.y[i]+","+b.p.u[i]+","+b.pi.y[i]+","+b.pi.u[i]+","+b.pid.y[i]+","+b.pid.u[i]+"\n";
  var url=URL.createObjectURL(new Blob([s],{type:"text/csv"})),a=document.createElement("a");a.href=url;a.download="control_simulation.csv";a.click();setTimeout(function(){URL.revokeObjectURL(url)},500);
 });
+if($("tableStep"))$("tableStep").addEventListener("change",function(){renderResultTable(lastBundle)});
+if($("tableCsv"))$("tableCsv").addEventListener("click",downloadVisibleTableCsv);
 window.addEventListener("resize",schedule);
 runAll();
 })();
